@@ -1,8 +1,8 @@
 # Ignore virtual environment
-venv/
+venv
 
 # Ignore system files
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 
@@ -11,12 +11,12 @@ bot_token.env
 .env
 
 # Ignore IDE and editor config files
-.vscode/
-.idea/
+.vscode
+.idea
 
 # Ignore log files
-logs/
+logs
 *.log
 
 # Ignore Render build files (if any)
-.nixpacks/
+.nixpacks
