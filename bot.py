@@ -2,7 +2,6 @@ import os
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
-from keep_alive import keep_alive  # Import Flask app
 
 # Load environment variables
 load_dotenv("bot_token.env")
@@ -21,7 +20,7 @@ except ValueError:
 
 # Set up bot with intents
 intents = discord.Intents.default()
-intents.guild_messages = True  # Corrected from `intents.messages`
+intents.guild_messages = True
 intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
@@ -118,9 +117,6 @@ async def mute(ctx, member: discord.Member):
         await ctx.send("⚠️ I don't have permission to mute members!")
     except Exception as e:
         await ctx.send(f"❌ Error: {str(e)}")
-
-# -------------------- Keep Alive (Flask) --------------------
-keep_alive()  # Runs Flask app
 
 # -------------------- Run Bot --------------------
 bot.run(TOKEN)
