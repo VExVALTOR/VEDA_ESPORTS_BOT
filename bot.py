@@ -1,8 +1,8 @@
 import os
 import discord
-import requests
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from keep_alive import keep_alive  # Import Flask app
 
 # Load environment variables
 load_dotenv("bot_token.env")
@@ -21,7 +21,7 @@ except ValueError:
 
 # Set up bot with intents
 intents = discord.Intents.default()
-intents.messages = True
+intents.guild_messages = True  # Corrected from `intents.messages`
 intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
@@ -37,6 +37,7 @@ async def check_voice():
         await connect_to_voice()
 
 async def connect_to_voice():
+    """Ensures bot stays in the voice channel"""
     try:
         channel = await bot.fetch_channel(VOICE_CHANNEL_ID)
         if isinstance(channel, discord.VoiceChannel):
@@ -62,9 +63,13 @@ async def on_voice_state_update(member, before, after):
 
 @bot.event
 async def on_ready():
+    """Runs when the bot is ready"""
     print(f"✅ Logged in as {bot.user}")
     await connect_to_voice()
-    check_voice.start()
+    try:
+        check_voice.start()
+    except RuntimeError:
+        print("⚠️ Task already running, skipping start.")
 
 # -------------------- Server Info Command --------------------
 @bot.command()
@@ -113,6 +118,9 @@ async def mute(ctx, member: discord.Member):
         await ctx.send("⚠️ I don't have permission to mute members!")
     except Exception as e:
         await ctx.send(f"❌ Error: {str(e)}")
+
+# -------------------- Keep Alive (Flask) --------------------
+keep_alive()  # Runs Flask app
 
 # -------------------- Run Bot --------------------
 bot.run(TOKEN)
