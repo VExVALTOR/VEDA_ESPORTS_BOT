@@ -2,4 +2,3 @@ discord.py
 python-dotenv
 requests
 PyNaCl
-lightrun==1.10.0
