@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from keep_alive import keep_alive
 
 # Load environment variables
 load_dotenv("bot_token.env")
@@ -119,4 +120,5 @@ async def mute(ctx, member: discord.Member):
         await ctx.send(f"❌ Error: {str(e)}")
 
 # -------------------- Run Bot --------------------
+keep_alive()
 bot.run(TOKEN)
