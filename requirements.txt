@@ -1,7 +1,7 @@
 discord.py
 python-dotenv
 requests
-PyNaCl
-flask
 gTTS
-openai
+asyncio
+sqlite3
+opencv-python
