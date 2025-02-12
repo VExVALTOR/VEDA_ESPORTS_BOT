@@ -17,6 +17,7 @@ bot_token.env
 # Ignore log files and log directories
 logs/
 *.log
+moderation_logs.txt
 
 # Ignore build/configuration files for deployment (e.g., Render, Nixpacks)
 .nixpacks/
