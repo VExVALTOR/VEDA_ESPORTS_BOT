@@ -3,5 +3,4 @@ python-dotenv
 requests
 gTTS
 asyncio
-sqlite3
 opencv-python
