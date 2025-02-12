@@ -4,3 +4,4 @@ requests
 gTTS
 asyncio
 opencv-python
+Flask
