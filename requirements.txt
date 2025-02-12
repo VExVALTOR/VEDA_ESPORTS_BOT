@@ -5,3 +5,4 @@ gTTS
 asyncio
 opencv-python
 Flask
+PyNaCl
