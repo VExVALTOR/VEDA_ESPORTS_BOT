@@ -1,12 +1,13 @@
 # Ignore virtual environment directory
 venv/
 
-# Ignore Python bytecode and cache files
+# Ignore Python cache files
 __pycache__/
 *.py[cod]
+*.pyo
 *$py.class
 
-# Ignore environment variable files (sensitive data)
+# Ignore sensitive environment variable files
 bot_token.env
 .env
 
@@ -14,19 +15,29 @@ bot_token.env
 .vscode/
 .idea/
 
-# Ignore log files and log directories
+# Ignore log files and runtime-generated files
 logs/
 *.log
 moderation_logs.txt
-
-# Ignore build/configuration files for deployment (e.g., Render, Nixpacks)
-.nixpacks/
-
-# Ignore the SQLite database file if you use one (for persistence)
-bot_data.db
-
-# Ignore any temporary files generated at runtime (for example, audio files)
 coach.mp3
 
-# (Optional) If you are no longer using JSON for scrims, ignore Scrims.json:
+# Ignore SQLite database (if used)
+bot_data.db
+
+# Ignore Nixpacks-related files for Render deployment
+.nixpacks/
+nixpacks.toml
+
+# Ignore deployment config files (optional)
+procfile
+
+# Ignore macOS-specific files
+.DS_Store
+
+# Ignore dependency files (if using Pipenv or Poetry)
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# (Optional) Ignore Scrims.json if no longer used
 Scrims.json
