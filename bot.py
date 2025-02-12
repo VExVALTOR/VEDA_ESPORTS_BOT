@@ -20,7 +20,8 @@ import time
 logging.basicConfig(level=logging.INFO)
 
 # -------------------- Environment Variables & Config --------------------
-load_dotenv("bot_token.env")
+# Use an environment variable for the dotenv filename if provided.
+load_dotenv(os.getenv("BOT_TOKEN_FILE", "bot_token.env"))
 TOKEN = os.getenv("DC_TOKEN")
 if not TOKEN:
     raise ValueError("DC_TOKEN not found in environment variables.")
@@ -54,7 +55,13 @@ bad_words_pattern = re.compile(r'\b(?:' + '|'.join(map(re.escape, BAD_WORDS)) + 
 
 # Warning cooldown: prevent spamming warnings (in seconds)
 WARNING_COOLDOWN = 60
-last_warning_times = {}  # Dict mapping user_id to last warning timestamp
+# (Global in-memory dictionary removed; we now use the database)
+
+# -------------------- Precheck FFmpeg for TTS --------------------
+TTS_ENABLED = True
+if not shutil.which("ffmpeg"):
+    logging.error("FFmpeg not found! TTS functionality will be disabled.")
+    TTS_ENABLED = False
 
 # -------------------- Bot Prefix Helper --------------------
 def get_prefix(bot, message):
@@ -111,6 +118,13 @@ class Database:
                          id INTEGER PRIMARY KEY AUTOINCREMENT,
                          action TEXT,
                          timestamp DATETIME)''')
+            # Table for warning cooldown persistence
+            c.execute('''CREATE TABLE IF NOT EXISTS warning_cooldown (
+                         user_id INTEGER PRIMARY KEY,
+                         last_warned TEXT)''')
+            # Add indexes for performance
+            c.execute("CREATE INDEX IF NOT EXISTS idx_user_stats ON user_stats(user_id)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_warnings ON warnings(user_id)")
             conn.commit()
     
     def execute(self, query, params=(), fetch=False):
@@ -156,6 +170,14 @@ class Database:
 
     def clear_warnings(self, user_id):
         self.execute("DELETE FROM warnings WHERE user_id = ?", (user_id,))
+    
+    # New methods for persistent warning cooldown:
+    def get_last_warning(self, user_id):
+        result = self.execute("SELECT last_warned FROM warning_cooldown WHERE user_id = ?", (user_id,), fetch=True)
+        return result[0][0] if result else None
+
+    def update_last_warning(self, user_id, timestamp):
+        self.execute("REPLACE INTO warning_cooldown (user_id, last_warned) VALUES (?, ?)", (user_id, timestamp))
 
 db = Database(DB_NAME)
 
@@ -191,7 +213,7 @@ async def paginate(ctx, pages, timeout=60):
             break
 
 # -------------------- Persistent 24/7 Voice Connection --------------------
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=1)  # Reduced interval from 5 minutes to 1 minute.
 async def maintain_default_voice_connection():
     """Ensure the bot stays connected to the default voice channel 24/7."""
     default_channel = bot.get_channel(DEFAULT_VOICE_CHANNEL_ID)
@@ -273,6 +295,7 @@ async def scrims_list(ctx):
 
 # 2. Team Performance Tracker & User-Specific Stats Commands
 @bot.command(name="logmatch")
+@commands.has_role("Team Captain")  # Only users with the "Team Captain" role can log a match.
 async def log_match_command(ctx, kills: int, damage: int, placement: int):
     """
     Log a match performance.
@@ -376,14 +399,10 @@ async def coach_command(ctx, *, topic: str = None):
         full_advice = "Keep practicing and never give up!"
         logging.error(f"Coach API error: {e}")
 
-    # Use TTS if the user is in a voice channel (and not in the default channel)
+    # Use TTS if the user is in a voice channel (and not in the default channel) and if TTS is enabled.
     user_vc = ctx.author.voice.channel if (ctx.author and ctx.author.voice) else None
-    if user_vc and user_vc.id != DEFAULT_VOICE_CHANNEL_ID:
+    if user_vc and user_vc.id != DEFAULT_VOICE_CHANNEL_ID and TTS_ENABLED:
         try:
-            # Check for FFmpeg availability
-            if not shutil.which("ffmpeg"):
-                await ctx.send("❌ FFmpeg is not installed. Please install FFmpeg to use TTS functionality.")
-                return
             if ctx.voice_client:
                 vc = await ctx.voice_client.move_to(user_vc)
             else:
@@ -395,9 +414,12 @@ async def coach_command(ctx, *, topic: str = None):
             vc.play(discord.FFmpegPCMAudio(audio_fp, pipe=True))
             while vc.is_playing():
                 await asyncio.sleep(1)
-            # Added delay before disconnecting
+            # Wait a bit then check if the channel still has other members before disconnecting.
             await asyncio.sleep(5)
-            await vc.disconnect()
+            if len(vc.channel.members) == 1:  # only the bot is left
+                await vc.disconnect()
+            else:
+                logging.info("Other users detected in voice channel; not disconnecting TTS connection.")
         except Exception as e:
             await ctx.send(f"❌ Error during TTS playback: {e}")
             logging.error(f"Coach TTS error: {e}")
@@ -412,12 +434,16 @@ async def analyze_command(ctx):
         await ctx.send("Please attach a video file for analysis.")
         return
     attachment = ctx.message.attachments[0]
+    # Check file size (limit: 50 MB)
+    if attachment.size > 50 * 1024 * 1024:
+        await ctx.send("❌ Video file too large. Maximum allowed size is 50MB.")
+        return
     try:
         video_bytes = await attachment.read()
-        temp_filename = "temp_video.mp4"
+        # Generate a unique temporary filename using the message ID
+        temp_filename = f"temp_video_{ctx.message.id}.mp4"
         with open(temp_filename, "wb") as f:
             f.write(video_bytes)
-        # Attempt to import cv2 and check for OpenCV installation
         try:
             import cv2
         except ImportError:
@@ -708,11 +734,13 @@ async def on_message(message):
             try:
                 await message.delete()
                 db.add_mod_log(f"Deleted message from {message.author.name}: {message.content}")
-                now = time.time()
-                last_warn = last_warning_times.get(message.author.id, 0)
-                if now - last_warn >= WARNING_COOLDOWN:
+                now = datetime.utcnow()
+                # Use persistent cooldown from the database:
+                last_warned_str = db.get_last_warning(message.author.id)
+                last_warned = datetime.fromisoformat(last_warned_str) if last_warned_str else None
+                if not last_warned or (now - last_warned).total_seconds() >= WARNING_COOLDOWN:
                     db.add_warning(message.author.id, "Bad word usage")
-                    last_warning_times[message.author.id] = now
+                    db.update_last_warning(message.author.id, now.isoformat())
                 await message.channel.send(f"🚫 {message.author.mention}, that message is not allowed.", delete_after=5)
             except Exception as e:
                 logging.error(f"Error auto-deleting message: {e}")
