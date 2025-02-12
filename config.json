@@ -1,6 +1,6 @@
 {
-    "default_voice_channel_id": "123456789012345678",
-    "feedback_channel_id": "123456789012345678",
+    "default_voice_channel_id": "1247836483164049449",
+    "feedback_channel_id": "1247598508417089559",
     "auto_moderation": true,
     "bad_words": ["bara", "choda", "spam"],
     "prefix": "!",
