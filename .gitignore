@@ -1,22 +1,31 @@
-# Ignore virtual environment
-venv
+# Ignore virtual environment directory
+venv/
 
-# Ignore system files
-__pycache__
-*.pyc
-*.pyo
+# Ignore Python bytecode and cache files
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Ignore environment variables (Sensitive data)
+# Ignore environment variable files (sensitive data)
 bot_token.env
 .env
 
-# Ignore IDE and editor config files
-.vscode
-.idea
+# Ignore IDE/editor configuration directories
+.vscode/
+.idea/
 
-# Ignore log files
-logs
+# Ignore log files and log directories
+logs/
 *.log
 
-# Ignore Render build files (if any)
-.nixpacks
+# Ignore build/configuration files for deployment (e.g., Render, Nixpacks)
+.nixpacks/
+
+# Ignore the SQLite database file if you use one (for persistence)
+bot_data.db
+
+# Ignore any temporary files generated at runtime (for example, audio files)
+coach.mp3
+
+# (Optional) If you are no longer using JSON for scrims, ignore Scrims.json:
+Scrims.json
