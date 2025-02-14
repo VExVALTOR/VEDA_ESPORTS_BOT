@@ -22,9 +22,9 @@ logging.basicConfig(level=logging.INFO)
 # -------------------- Environment Variables & Config --------------------
 # Use an environment variable for the dotenv filename if provided.
 load_dotenv(os.getenv("BOT_TOKEN_FILE", "bot_token.env"))
-TOKEN = os.getenv("DC_TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    raise ValueError("DC_TOKEN not found in environment variables.")
+    raise ValueError("DISCORD_TOKEN not found in environment variables.")
 
 try:
     with open("config.json") as f:
